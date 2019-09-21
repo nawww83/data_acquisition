@@ -3,6 +3,7 @@ import requests as rq
 from bs4 import BeautifulSoup as bs
 import json as js
 from pprint import pprint as pp
+import math
 
 '''
 1) Необходимо собрать информацию о вакансиях на вводимую должность (используем input или через аргументы) с сайта
@@ -23,11 +24,11 @@ method = '/search/vacancy?L_is_autosearch=false&area=90&clusters=true&enable_sni
 
 lp = sys.argv
 position = 'Водитель'
-npages = 1
+npages = math.inf
 if len(lp) > 1:
     position = lp[1]
 if len(lp) > 2:
-    npages = lp[2]
+    npages = int(lp[2])
 
 html = rq.get(main_link_hh, headers = user_agent).text
 parsed = bs(html, 'lxml')
@@ -48,24 +49,53 @@ if pos_finded:
 else:
     pp('Профессия ' + position.lower() + ' не найдена!')
 
+pp('')
+
 page = 0
 query = {'class':'vacancy-serp'}
+data = []
 while page < npages:
     html = rq.get(main_link_hh + method + position + '&page=' + str(page), headers = user_agent).text
     if html:
         parsed = bs(html, 'lxml')
         items = parsed.find('div', query).findChildren()
-        data_pos = 0
+        out_of_range = parsed.find('div', {'data-qa':'pager-block'}).findChildren()
+        b_out = True
+        for out in out_of_range:
+            if out.get('data-qa') == 'pager-next':
+                b_out = False
+                break
         for item in items:
-            if item.get('class') == ['g-user-content']:
-                a = item.findChild()
-                if a:                
-                    pp(a.getText())
-                    data_pos += 1
+            tmp = {}
+            if item.get('data-qa') == 'vacancy-serp__vacancy-title':
+                _tt = item.getText().strip()
+                if _tt:
+                    tmp['title'] = _tt
+            if item.get('data-qa') == 'vacancy-serp__vacancy-employer':
+                _tt = item.getText().strip()
+                if _tt:
+                    tmp['employeer'] = _tt
+            if item.get('data-qa') == 'vacancy-serp__vacancy-compensation':
+                _tt = item.getText().strip().replace('\xa0', ' ')
+                if _tt:
+                    tmp['compensation'] = _tt
+            if item.get('data-qa') == 'vacancy-serp__vacancy-address':
+                _tt = item.getText().strip()
+                if _tt:
+                    tmp['address'] = _tt
+            if tmp:
+                data.append(tmp)
         page += 1
-    else:
-        break
+        pp(page)
+        if b_out:
+            break
+pp(data)
 
-pp('Все закончилось!')
+pp('Обработано ' + str(page) + ' страниц')
 
-
+'''
+if item.get('class') == ['g-user-content']:
+        a = item.findChildren()
+        for _a in a:                                    
+            pp(_a.getText())
+'''
