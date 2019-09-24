@@ -99,8 +99,8 @@ while page < npages: # перебираем все страницы по най�
                 _tt = item.getText().strip().replace('\xa0', '')
                 if _tt:
                     _tt_salar = separate_salaries(_tt)
-                    tmp['compensation_min'] = _tt_salar[0]
-                    tmp['compensation_max'] = _tt_salar[1]
+                    tmp['compensation_min'] = int(_tt_salar[0]) if _tt_salar[0] else None
+                    tmp['compensation_max'] = int(_tt_salar[1]) if _tt_salar[1] else None
                     _filled += 1
             if item.get('data-qa') == 'vacancy-serp__vacancy-address':
                 _tt = item.getText().strip()
@@ -125,4 +125,6 @@ pp(df)
 
 pp('Обработано ' + str(page) + ' страниц')
 
+with open('hh.json', 'w') as f:
+    js.dump(data, f)
 
