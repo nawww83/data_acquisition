@@ -19,7 +19,7 @@ db = client['vacancies']
 with open('../lesson_02/hh.json') as f:
     data = js.load(f)
 
-db.hh.drop()
+db.hh.delete_many({})
 
 hh = db.hh
 
