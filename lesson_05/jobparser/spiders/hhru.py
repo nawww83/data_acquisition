@@ -3,6 +3,7 @@ import scrapy
 from scrapy.http import HtmlResponse
 from jobparser.items import JobparserItem
 
+from jobparser.spiders.str_m import list_to_str
 
 class HhruSpider(scrapy.Spider):
     name = 'hhru'
@@ -17,8 +18,7 @@ class HhruSpider(scrapy.Spider):
             yield response.follow(link, self.vacancy_parse)
 
     def vacancy_parse(self, response: HtmlResponse):
-        name = ''.join( response.xpath('//div[contains(@class,"vacancy-title")]//h1[@class="header"]//text()').extract() ) # В имени вакансии сайт подсвечивает слово из строки поиска, поэтому такой костыль с //, extract() и join()
-        name = name.strip().replace('\xa0', '')
-        salary = response.xpath('//div[contains(@class,"vacancy-title")]/p[@class="vacancy-salary"]/text()').extract_first().strip()
-        company = response.xpath('//a[@class="vacancy-company-name"]/span/text()').extract_first().strip()
+        name = list_to_str( response.xpath('//div[contains(@class,"vacancy-title")]//h1[@class="header"]//text()').extract() )
+        salary = list_to_str( response.xpath('//div[contains(@class,"vacancy-title")]/p[@class="vacancy-salary"]/text()').extract_first() )
+        company = list_to_str( response.xpath('//a[@class="vacancy-company-name"]/span/text()').extract_first() )
         yield JobparserItem(name=name, salary=salary, link=response.url, company=company)
