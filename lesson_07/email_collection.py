@@ -5,8 +5,35 @@ import base64
 
 from selenium import webdriver as wd
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-url =   'https://mail.tusur.ru/'
+from pymongo import MongoClient
+from collections import OrderedDict as od
+
+def get_mails(mails):
+    items = []
+    for mail in mails:
+        item = od()
+        fromTo = mail.find_element_by_xpath('td[@class = "fromto"]').text.strip()
+        item['От кого'] = fromTo
+        date = mail.find_element_by_xpath('td[@class = "date"]').text.strip()
+        item['Дата'] = date
+        sba = mail.find_element_by_xpath('td[@class = "subject"]/a')
+        subject = sba.text.strip()
+        item['Тема'] = subject
+        href = sba.get_attribute('href').strip()
+        item['href'] = href
+        items.append(item)
+    return items
+
+
+client = MongoClient('localhost', 27017)
+db = client['mails']
+collection = db['tusur']
+
+url = 'https://mail.tusur.ru/'
 
 options = wd.ChromeOptions()
 #options.add_argument('--ignore-certificate-errors')
@@ -39,10 +66,47 @@ with open('pass.txt', 'rb') as f:
 title = 'TUSUR Webmail :: Входящие'
 assert title in driver.title
 
-time.sleep(1)
+items = []
 
-mails = driver.find_elements_by_xpath('//tr[contains(@id, "rcmrow")]')
-for mail in mails:
-    print(mail.find_element_by_xpath('td[@class="subject"]/a').text.strip())
+wait = WebDriverWait(driver, 5) 
+mails = wait.until(EC.presence_of_all_elements_located((By.XPATH, '//tr[contains(@id, "rcmrow")]')))
+mails_count = len(mails)
+items.extend(get_mails(mails))
+pages = 1 if mails_count > 0 else 0
+if pages > 0:
+    print('Обработана страница номер ' + str(pages))
+while True:
+    try:
+        button = wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@class="button nextpage"]')))
+        button.click()
+        mails = wait.until(EC.presence_of_all_elements_located((By.XPATH, '//tr[contains(@id, "rcmrow")]')))
+        items.extend(get_mails(mails))
+        cnt = len(mails)
+        mails_count += cnt
+        pages = (pages + 1) if cnt > 0 else pages
+        print('Обработана страница номер ' + str(pages))
+    except:
+        print('Обработка закончена')
+        break
 
+print('Обработано ' + str(pages) + ' страниц и ' + str(mails_count) + ' ссылок на письма')
+
+print('Получение текста писем и запись всего в базу данных MongoDB')
+docs = 0
+for item in items:
+    print('Получаем из ' + item['href'])
+    driver.get(item['href'])
+    msg = driver.find_element_by_id('messagebody').text.strip()
+    _ii = item
+    _ii.pop('href')
+    _ii['Сообщение'] = msg
+    try:
+        collection.insert_one(_ii)
+        docs += 1
+    except:
+        pass
+
+print('Работа закончена')
+print('В базу вставлено ' + str(docs) + ' документов')
 driver.quit()
+
