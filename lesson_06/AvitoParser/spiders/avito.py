@@ -10,6 +10,8 @@ class AvitoSpider(scrapy.Spider):
     start_urls = ['https://www.avito.ru/tomsk/avtomobili']
 
     def parse(self, response: HtmlResponse):
+        next_page = response.css('a.js-pagination-next::attr(href)').extract_first()
+        yield response.follow(next_page, callback = self.parse)
         xp = '//a[@class="item-description-title-link"]/@href'
         ads_links = response.xpath(xp).extract()
         for l in ads_links:
