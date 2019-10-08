@@ -10,6 +10,7 @@ url =   'https://mail.tusur.ru/'
 
 options = wd.ChromeOptions()
 #options.add_argument('--ignore-certificate-errors')
+options.add_argument('--headless')
 driver_path = '/usr/lib/chromium-browser/libs/chromedriver'
 
 driver = wd.Chrome(chrome_options = options, executable_path = driver_path) 
@@ -38,6 +39,10 @@ with open('pass.txt', 'rb') as f:
 title = 'TUSUR Webmail :: Входящие'
 assert title in driver.title
 
-time.sleep(5)
+time.sleep(1)
+
+mails = driver.find_elements_by_xpath('//tr[contains(@id, "rcmrow")]')
+for mail in mails:
+    print(mail.find_element_by_xpath('td[@class="subject"]/a').text.strip())
 
 driver.quit()
