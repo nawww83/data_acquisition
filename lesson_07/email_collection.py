@@ -50,6 +50,8 @@ assert title in driver.title
 login = driver.find_element_by_id('rcmloginuser')
 login.send_keys('anatolii.v.novikov@tusur.ru')
 
+
+''' Расшифровка пароля '''
 with open('key.txt', 'rb') as f:
     key = f.read()
     iv = Random.new().read(AES.block_size)
@@ -62,13 +64,16 @@ with open('pass.txt', 'rb') as f:
     pwd = driver.find_element_by_id('rcmloginpwd')
     pwd.send_keys(passwd)
     pwd.send_keys(Keys.RETURN)
+''' '''
+
 
 title = 'TUSUR Webmail :: Входящие'
 assert title in driver.title
 
 items = []
+timeout = 5
 
-wait = WebDriverWait(driver, 5) 
+wait = WebDriverWait(driver, timeout) 
 mails = wait.until(EC.presence_of_all_elements_located((By.XPATH, '//tr[contains(@id, "rcmrow")]')))
 mails_count = len(mails)
 items.extend(get_mails(mails))
@@ -81,9 +86,8 @@ while True:
         button.click()
         mails = wait.until(EC.presence_of_all_elements_located((By.XPATH, '//tr[contains(@id, "rcmrow")]')))
         items.extend(get_mails(mails))
-        cnt = len(mails)
-        mails_count += cnt
-        pages = (pages + 1) if cnt > 0 else pages
+        mails_count += len(mails)
+        pages = (pages + 1) if mails else pages
         print('Обработана страница номер ' + str(pages))
     except:
         print('Обработка закончена')
@@ -91,10 +95,10 @@ while True:
 
 print('Обработано ' + str(pages) + ' страниц и ' + str(mails_count) + ' ссылок на письма')
 
-print('Получение текста писем и запись всего в базу данных MongoDB')
+print('Получение текста писем и запись всего в базу данных MongoDB...')
 docs = 0
 for item in items:
-    print('Получаем из ' + item['href'])
+#    print('Получаем из ' + item['href'])
     driver.get(item['href'])
     msg = driver.find_element_by_id('messagebody').text.strip()
     _ii = item
